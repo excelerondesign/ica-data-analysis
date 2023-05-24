@@ -1,0 +1,12 @@
+---
+import Filter from "./Filter.astro";
+import FilterGroup from "./FilterGroup.astro";
+const props = Astro.props;
+
+---
+<ul>
+    <FilterGroup name="gender" values={["Male", "Female", "Unknown"]} type="radio" />
+</ul>
+<script>
+
+</script>

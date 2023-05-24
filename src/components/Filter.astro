@@ -1,0 +1,13 @@
+---
+const {
+    type,
+    name,
+    id,
+    label
+} = Astro.props;
+const classNames = `filter filter--${type}`
+---
+<li class={classNames}>
+    <input type={type} name={name} id={id || name+'Filter'} />
+    <label for={id || name+'Filter'}>{label}</label>
+</li>

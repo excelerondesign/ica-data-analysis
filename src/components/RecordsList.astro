@@ -1,0 +1,26 @@
+---
+const {
+    record = {}
+} = Astro.props;
+const data = Object.entries(record);
+---
+<div>
+    <p class="patient-name">{record['Patient Name']}</p>
+    <details>
+        <summary>Full Record</summary>
+        <ul>
+            {
+                data.map(([key,value])=>(
+                    <li>{key}: {value}</li>
+                ))
+            }
+        </ul>
+    </details>
+</div>
+<style>
+.patient-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: 0.1px;
+}
+</style>

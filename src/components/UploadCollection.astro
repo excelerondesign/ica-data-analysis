@@ -1,0 +1,102 @@
+---
+import { getRecords } from '../lib/getRecords'
+import { useSanityClient, groq } from 'astro-sanity';
+const token = import.meta.env.SANITY_TOKEN;
+const projectId = import.meta.env.SANITY_PROJECT_ID;
+if (Astro.request.method === 'POST') {
+    const client = useSanityClient();
+
+    const data = await Astro.request.formData();
+
+    const records = await getRecords(1);
+    const entries = [];
+    for (const record of records) {
+        delete record['Patient Name'];
+        delete record['Patient First Name'];
+        delete record['Patient Middle Initial'];
+        delete record['Patient Last Name'];
+        delete record['Patient Preferred Name'];
+        delete record['Patient Previous Name'];
+        entries.push(record);
+    }
+
+    // console.log(entries);
+    /*
+    const query = groq`{
+        create: {
+            _id: ${Date.now()},
+            _type: 'collection',
+            name: ${data.get('name')}
+        }
+    }`*/
+
+    const body = JSON.stringify({
+        name: data.get('name')
+    })
+    data.append('file', data.get('csv'), performance.now() + 'records.csv');
+    const mutations = [
+        {
+            create: {
+                _type: 'collection',
+                title: data.get('name'),
+                description: data.get('description'),
+                file: data.get('file'),
+            }
+        }
+    ];
+    
+    /** client.create returns a result object with everything created, we need to grab the id though */
+    const { _id } = await client.create({
+        _type: 'collection',
+        name: data.get('name'),
+        description: data.get('description'),
+        records: [
+            ...entries
+        ].map(e => JSON.stringify(e))
+    }, {
+        token
+    });
+    const file = data.get('file') as File;
+    console.log(Object.prototype.toString.call(file));;
+    const uploadResults = await client.assets.upload('file', file, {
+        filename: file.name
+    });
+
+    console.log(uploadResults);
+
+    // console.log(result);
+    console.log(data.get('csv'));
+}
+
+
+
+---
+<form action={Astro.url.href} method="POST" enctype="multipart/form-data">
+    <label for="name">Name
+        <input type="text" name="name" id="name" -required />
+    </label>
+    <label for="description">Description
+        <textarea name="description" id="description"></textarea>
+    </label>
+    <label for="csv">File (Must be .csv format, .xls will not work.);
+        <input type="file" name="csv" id="csv" -required accept=".csv" />
+    </label>
+    <div>
+        <button>Create Dataset</button>
+    </div>
+</form>
+<style>
+    form {
+        display: grid;
+        grid-template-columns: 1fr [form] repeat(2, 2fr) 1fr;
+        gap: 1rem;
+    }
+    label {
+        display: flex;
+        flex-direction: column;
+        grid-column: form / span 1;
+    }
+    label:has(textarea) {
+        grid-column: span 1;
+    }
+</style>

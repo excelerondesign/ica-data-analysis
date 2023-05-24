@@ -10,6 +10,12 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^2.4.1"
+    "@astrojs/preact": "^2.2.0",
+    "astro": "^2.4.1",
+    "astro-sanity": "^1.1.7",
+    "csv-parse": "^5.3.10",
+    "csv-parser": "^3.0.0",
+    "papaparse": "^5.4.1",
+    "preact": "^10.15.0"
   }
 }

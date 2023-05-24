@@ -1,0 +1,11 @@
+.wrapper {
+    display: flex;
+}
+
+.choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.totals {
+    grid-column: 1 / -1;
+}

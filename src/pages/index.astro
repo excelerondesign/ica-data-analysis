@@ -1,45 +1,34 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Card from '../components/Card.astro';
----
+import RecordsList from '../components/RecordsList.astro';
+import { getRecords } from '../lib/getRecords';
+const possibleParam = Astro.url.searchParams.get('page');
+const currPage = possibleParam === '' ? 1 : +possibleParam;
+console.log(possibleParam);
+const records = await getRecords(currPage);
 
+---
 <Layout title="Welcome to Astro.">
 	<main>
-		<h1>Welcome to <span class="text-gradient">Astro</span></h1>
-		<p class="instructions">
-			To get started, open the directory <code>src/pages</code> in your project.<br />
-			<strong>Code Challenge:</strong> Tweak the "Welcome to Astro" message above.
-		</p>
-		<ul role="list" class="link-card-grid">
-			<Card
-				href="https://docs.astro.build/"
-				title="Documentation"
-				body="Learn how Astro works and explore the official API docs."
-			/>
-			<Card
-				href="https://astro.build/integrations/"
-				title="Integrations"
-				body="Supercharge your project with new frameworks and libraries."
-			/>
-			<Card
-				href="https://astro.build/themes/"
-				title="Themes"
-				body="Explore a galaxy of community-built starter themes."
-			/>
-			<Card
-				href="https://astro.build/chat/"
-				title="Community"
-				body="Come say hi to our amazing Discord community. ❤️"
-			/>
-		</ul>
+		<span>time: {performance.now()}</span>
+		<!-- https://docs.astro.build/en/recipes/build-forms/ -->
+		<form enctype="multipart/form-data" method="POST">
+			
+			<input type="file" name="upload" id="upload" />
+			<button>Submit</button>
+		</form>
+		<div>
+			{records.length > 0 && records.map(r => <RecordsList record={r} />)}
+		</div>
+		{currPage > 1 && <a href={`/?page=${currPage - 1}`}>Previous Page</a>}
+		<a href={`/?page=${currPage + 1}`}>Next Page</a>
 	</main>
 </Layout>
-
 <style>
 	main {
 		margin: auto;
 		padding: 1.5rem;
-		max-width: 60ch;
+		max-width: 95ch;
 	}
 	h1 {
 		font-size: 3rem;
