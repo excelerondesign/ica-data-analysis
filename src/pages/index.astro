@@ -1,11 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import RecordsList from '../components/RecordsList.astro';
-import { getRecords } from '../lib/getRecords';
+// import RecordsList from '../components/RecordsList.astro';
+// import { getRecords } from '../lib/getRecords';
 const possibleParam = Astro.url.searchParams.get('page');
 const currPage = possibleParam === '' ? 1 : +possibleParam;
 
-const records = await getRecords(currPage);
+// const records = await getRecords(currPage);
 
 ---
 <Layout title="Welcome to Astro.">
@@ -18,7 +18,7 @@ const records = await getRecords(currPage);
 			<button>Submit</button>
 		</form>
 		<div>
-			{records.length > 0 && records.map(r => <RecordsList record={r} />)}
+			<!--{records.length > 0 && records.map(r => <RecordsList record={r} />)}-->
 		</div>
 		{currPage > 1 && <a href={`/?page=${currPage - 1}`}>Previous Page</a>}
 		<a href={`/?page=${currPage + 1}`}>Next Page</a>
