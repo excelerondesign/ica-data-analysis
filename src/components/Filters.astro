@@ -3,23 +3,41 @@ import FilterGroup from "./FilterGroup.astro";
 import { Clinics } from '../lib/data';
 
 const ClinicFilterValues = Clinics.map(c => c.name[0].toUpperCase() + c.name.substring(1));
-const defaultRadius = 5;
+const {
+    defaultRadius
+} = Astro.props
 ---
 <ul class="filter--list">
     <FilterGroup name="Clinic" filterType="clinic" values={ClinicFilterValues} type="checkbox" />
     <FilterGroup name="Sex" filterType="sex" values={["Male", "Female", "Unknown"]} type="radio" />
     <li>
-        <button type="button" id="forceClear">Clear All Filters</button>
-    </li>
-    <li>
         <div id="mapControls">
-            <label for="circleRadius">Radius: 
+            <p>Radius:</p>
+            <label for="circleRadius">
                 <input type="range" name="circleRadius" value={defaultRadius} id="circleRadius" max="25" min="0" step="2.5" />
                 <span id="radiusAmount">{`${defaultRadius} mi.`}</span>
             </label>
         </div>
     </li>
+    <li>
+        <button class="btn" type="button" id="forceClear">Clear All Filters</button>
+    </li>
 </ul>
+<style is:global>
+    .filter--list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        list-style-type: none;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    .filter--list p {
+        font-size: 1.1rem;
+        font-weight: 500;
+        text-decoration: underline;
+    }
+</style>
 <script>
 import { emit, on } from "../lib/Events";
 

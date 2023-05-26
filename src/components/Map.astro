@@ -1,7 +1,10 @@
 ---
 import TotalMarkers from './TotalMarkers.astro';
+const {
+    defaultRadius 
+} = Astro.props;
 ---
-<div id="map"></div>
+<div id="map" data-default-radius={defaultRadius}></div>
 <TotalMarkers />
 <script>
     import { Clusterer } from '../lib/Clusterer';
@@ -69,7 +72,7 @@ import TotalMarkers from './TotalMarkers.astro';
     
     const clusterer = new Clusterer(markers.all(), map)
     
-    const circles = new Circles(map, _map, 2.5, Clinics);
+    const circles = new Circles(map, _map, +_map.dataset.defaultRadius, Clinics);
 
     
 
@@ -133,7 +136,7 @@ import TotalMarkers from './TotalMarkers.astro';
 </script>
 <style>
     #map {
-        width: 100vw;
+        width: 100%;
         height: 100vh;
         max-width: 100%;
     }

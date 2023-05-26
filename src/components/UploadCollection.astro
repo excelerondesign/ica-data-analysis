@@ -71,15 +71,15 @@ if (Astro.request.method === 'POST') {
         </div>
     </div>
     <input type="hidden" name="records" id="records" />
-    <div>
-        <button>Create Dataset</button>
+    <div class="col-form">
+        <button disabled class="btn">Create Dataset</button>
     </div>
 </form>
 <script>
     import Papa from 'papaparse';
     import { Loader } from '@googlemaps/js-api-loader';
 
-import { h } from 'preact';
+// import { h } from 'preact';
 
     const file = document.getElementById('csv') as HTMLInputElement;
     const list = document.querySelector('.tags-list');
@@ -224,15 +224,26 @@ import { h } from 'preact';
 <style>
     form {
         display: grid;
-        grid-template-columns: 1fr [form] repeat(2, 2fr) 1fr;
+        grid-template-columns: [form] repeat(2, 2fr);
         gap: 1rem;
+    }
+    input,
+    textarea {
+        border-color: transparent;
+        padding: 0.5em;
+        border-radius: 4px;
     }
     label {
         display: flex;
         flex-direction: column;
         grid-column: form / span 1;
+        font-size: 1.1rem;
+        font-weight: 500;
     }
     label:has(textarea) {
         grid-column: span 1;
+    }
+    .col-form {
+        grid-column: form;
     }
 </style>

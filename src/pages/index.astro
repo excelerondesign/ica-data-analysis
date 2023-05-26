@@ -9,19 +9,29 @@ const currPage = possibleParam === '' ? 1 : +possibleParam;
 
 ---
 <Layout title="Welcome to Astro.">
+	
 	<main>
-		<span>time: {performance.now()}</span>
+		<h1>Injury Care Associate Data Analysis</h1>
+		<p>Some functionality of the site has been disabled to prevent side effects that are unwanted.</p>
+		<nav>
+			Pages available:
+			<ul>
+				<li><a href="/upload">Upload Form</a><br/>Upload .csv files to analyze.</li>
+				<li><a href="/map">Map Analysis</a><br/>View uploaded data overlayed on a map.</li>
+			</ul>
+		</nav>
+		<!-- <span>time: {performance.now()}</span> -->
 		<!-- https://docs.astro.build/en/recipes/build-forms/ -->
-		<form enctype="multipart/form-data" method="POST">
+		<!-- <form enctype="multipart/form-data" method="POST">
 			
 			<input type="file" name="upload" id="upload" />
 			<button>Submit</button>
-		</form>
+		</form> -->
 		<div>
 			<!--{records.length > 0 && records.map(r => <RecordsList record={r} />)}-->
 		</div>
-		{currPage > 1 && <a href={`/?page=${currPage - 1}`}>Previous Page</a>}
-		<a href={`/?page=${currPage + 1}`}>Next Page</a>
+		<!-- {currPage > 1 && <a href={`/?page=${currPage - 1}`}>Previous Page</a>} -->
+		<!-- <a href={`/?page=${currPage + 1}`}>Next Page</a> -->
 	</main>
 </Layout>
 <style>
