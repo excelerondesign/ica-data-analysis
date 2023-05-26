@@ -23,7 +23,7 @@ const off = (type:string, handler:unknown) => {
 const emit = (type: string, detail = {}) => {
     
     const handlers = all!.get(type);
-    console.log(type, handlers);
+    // console.log(type, handlers);
     if (handlers) {
         handlers.slice().map(handler => handler(detail));
     }

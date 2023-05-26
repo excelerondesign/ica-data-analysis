@@ -63,7 +63,7 @@ export async function _parseRecords(file:File|Response|null, group: number):Prom
             res({ err: null, records });
         });
     });*/
-    console.log(records);
+    
     if (err) throw err;
 
     if (_headers.length === 0) _headers.concat(Object.keys(records));

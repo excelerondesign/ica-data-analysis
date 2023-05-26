@@ -81,7 +81,7 @@ export default function() {
 			<FiltersList headers={headers} />
 			<ul class="columns" role="list">
 				{columns.map((c, i) => {
-					if (i === 0) console.log(c, filters);
+					// if (i === 0) console.log(c, filters);
 					const values = {};
 					filters.forEach(f => values[f] = c[f]);
 					const name = c['Patient Name'];
