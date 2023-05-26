@@ -3,13 +3,12 @@ import Layout from '../layouts/Layout.astro';
 // import RecordsList from '../components/RecordsList.astro';
 // import { getRecords } from '../lib/getRecords';
 const possibleParam = Astro.url.searchParams.get('page');
-const currPage = possibleParam === '' ? 1 : +possibleParam;
+// const currPage = possibleParam === '' ? 1 : +possibleParam;
 
 // const records = await getRecords(currPage);
 
 ---
-<Layout title="Welcome to Astro.">
-	
+<Layout title="Data Analysis | ICA">
 	<main>
 		<h1>Injury Care Associate Data Analysis</h1>
 		<p>Some functionality of the site has been disabled to prevent side effects that are unwanted.</p>
