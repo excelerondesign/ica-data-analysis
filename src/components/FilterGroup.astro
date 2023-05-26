@@ -1,12 +1,20 @@
 ---
-import Filter from "./Filter.astro";
 const {
     values,
     type,
-    name
+    name,
+    filterType
 } = Astro.props;
 ---
-<li>
+<li id={name}>
     <p class="filter-group-title">{name}</p>
+    {
+        values.map((v:unknown) => {
+            const classNames = `filter filter--${type}`;
+            const id = `${name}-${v}`;
+            return <label for={id}>{v}
+                <input type={type} data-type={filterType} name={filterType} class={classNames} value={v as string} id={id} />
+            </label>
+        })
+    }
 </li>
-{values.map(value => <Filter name={name} id={`${name}-${value}`} label={value} type={type}/>)}

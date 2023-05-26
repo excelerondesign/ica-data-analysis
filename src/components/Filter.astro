@@ -1,5 +1,6 @@
 ---
 const {
+    value, 
     type,
     name,
     id,
@@ -8,6 +9,6 @@ const {
 const classNames = `filter filter--${type}`
 ---
 <li class={classNames}>
-    <input type={type} name={name} id={id || name+'Filter'} />
+    <input type={type} name={name} id={id || name+'Filter'} value={value} />
     <label for={id || name+'Filter'}>{label}</label>
 </li>

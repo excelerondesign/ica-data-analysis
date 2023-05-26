@@ -1,0 +1,140 @@
+---
+import TotalMarkers from './TotalMarkers.astro';
+---
+<div id="map"></div>
+<TotalMarkers />
+<script>
+    import { Clusterer } from '../lib/Clusterer';
+    import { library } from '../lib/google-loader';
+    import { Circles } from '../lib/Circles';
+    import { Markers } from '../lib/Markers';
+    import { _markers, Clinics } from '../lib/data';
+    import { emit, on } from '../lib/Events';
+
+    const _map = document.getElementById('map') as HTMLDivElement;
+    
+    const { Map } = await library.maps.importLibrary('maps');
+
+    async function getClinicsBounds() {
+        const { LatLng, LatLngBounds } = await library.maps.importLibrary('core');
+
+        const boundsInitial = new LatLngBounds(Clinics[0]);
+        
+        Clinics.forEach(clinic => boundsInitial.extend(new LatLng(clinic)));
+        
+        return boundsInitial;
+    }
+    const bounds = await getClinicsBounds();
+    
+    const center = bounds.getCenter();
+    
+    const map = new Map(_map, {
+        center,
+        zoom: 10,
+        disableDefaultUI: true,
+    });
+    
+    
+    type Marker = {
+        setVisible: (isVisible: boolean) => void;
+        getCenter: () => number;
+    }
+
+    const markers = new Markers(_markers(Clinics), map, bounds);
+
+    map.setCenter(bounds.getCenter());
+    map.fitBounds(bounds);
+
+    map.controls[library.maps.ControlPosition.TOP_RIGHT].push(document.querySelector('.totalmarkers--wrapper'));
+
+    type Filters = {
+        [index: string]: () => void;
+    }
+    let filters:Filters = {};
+    
+    
+    let fRic;
+    
+    const runFilters = () => {
+        cancelIdleCallback(fRic);
+        fRic = requestIdleCallback(() => {
+            Object.values(filters).forEach(callback => callback())
+            
+            emit('markers:visibilitychange', {
+                markers: markers.all(),
+                visible: markers.getVisible(),
+            });
+        });
+    };
+    
+    const clusterer = new Clusterer(markers.all(), map)
+    
+    const circles = new Circles(map, _map, 2.5, Clinics);
+
+    
+
+    on('filters:change', ({ type, value }) => {
+        if (fRic) cancelIdleCallback(fRic);
+        
+        if (type === 'clinic' && value instanceof Array) {
+            if (value.length > 0) {
+                filters.clinic = () => {
+                    circles.hide(value);
+                    
+                    const clusterMarkers = [];
+
+                    markers.setVisible(m => {
+                        const isInBounds = circles.calculateInCircle(m, value);
+
+                        m.setVisible(isInBounds);
+                        if (m.getVisible()) clusterMarkers.push(m);
+                    });
+                    clusterer.refresh();
+                }
+            } else {
+                filters.clinic = () => {
+                    delete filters.clinic;
+                    circles.showAll();
+                    requestAnimationFrame(() => markers.reset());
+                    requestAnimationFrame(() => clusterer.refresh());
+                }
+            }
+        }
+        if (type === 'sex') {
+            filters.sex = () => {
+                value = value.toLowerCase();
+
+                const _markers = markers.getVisible();
+
+                _markers.forEach(m => {
+                    m.setVisible(m.data['Patient Gender'] === value);
+                });
+
+                clusterer.refresh();
+            }
+        }
+
+        runFilters();
+    });
+
+    on('filters:clear', ({ type, force }) => {
+        circles.showAll();
+        if (force) {
+            filters = {};
+            markers.reset();
+        } else if (type && type in filters) {
+            delete filters[type];
+            runFilters();
+        }
+        clusterer.refresh();
+    });
+
+    on('filters:refresh', () => runFilters());
+</script>
+<style>
+    #map {
+        width: 100vw;
+        height: 100vh;
+        max-width: 100%;
+    }
+</style>

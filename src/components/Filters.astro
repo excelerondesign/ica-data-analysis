@@ -1,12 +1,67 @@
 ---
-import Filter from "./Filter.astro";
 import FilterGroup from "./FilterGroup.astro";
-const props = Astro.props;
+import { Clinics } from '../lib/data';
 
+const ClinicFilterValues = Clinics.map(c => c.name[0].toUpperCase() + c.name.substring(1));
+const defaultRadius = 5;
 ---
-<ul>
-    <FilterGroup name="gender" values={["Male", "Female", "Unknown"]} type="radio" />
+<ul class="filter--list">
+    <FilterGroup name="Clinic" filterType="clinic" values={ClinicFilterValues} type="checkbox" />
+    <FilterGroup name="Sex" filterType="sex" values={["Male", "Female", "Unknown"]} type="radio" />
+    <li>
+        <button type="button" id="forceClear">Clear All Filters</button>
+    </li>
+    <li>
+        <div id="mapControls">
+            <label for="circleRadius">Radius: 
+                <input type="range" name="circleRadius" value={defaultRadius} id="circleRadius" max="25" min="0" step="2.5" />
+                <span id="radiusAmount">{`${defaultRadius} mi.`}</span>
+            </label>
+        </div>
+    </li>
 </ul>
 <script>
+import { emit, on } from "../lib/Events";
 
+const list = document.querySelector<HTMLUListElement>('.filter--list');
+const radiusInput = document.querySelector<HTMLInputElement>('#circleRadius');
+const forceClear = document.querySelector<HTMLButtonElement>('#forceClear');
+
+on('circles:update', ({ radius }) => {
+    const label = radiusInput.closest('label');
+    label.querySelector<HTMLSpanElement>('span').textContent = radius + ' mi.';
+})
+
+list.addEventListener('input', ({ target }) => {
+    const input = target as HTMLInputElement;
+    const type = input.dataset.type;
+
+    if (input.value === 'clear') {
+        emit('filters:clear', { type });
+    } else {
+        let value = input.type === 'checkbox' ? [input.value] : input.value;
+        if (input.type === 'checkbox') {
+            const name = input.name;
+            const inputs = Array.from(input.closest('li').querySelectorAll<HTMLInputElement>(`[name=${name}]`));
+            value = inputs.filter(input => input.checked).map(input => input.value);
+        }
+        emit('filters:change', { type, value });
+    }
+}, true)
+
+radiusInput.addEventListener('input', () => {
+    emit('circles:update', { radius: radiusInput.value });
+});
+
+forceClear.addEventListener('click', () => emit('filters:clear', { force: true }));
+
+on('filters:clear', () => {
+    list.querySelectorAll<HTMLInputElement>('.filter').forEach(f => {
+        if (['radio', 'checkbox'].includes(f.type)) {
+            f.checked = false;
+        } else {
+            f.value = '';
+        }
+    })
+})
 </script>

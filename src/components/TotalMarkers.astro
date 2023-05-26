@@ -1,0 +1,78 @@
+---
+const totalDefault = 1000;
+const visibleDefault = 1000;
+---
+<div class="wrapper totalmarkers--wrapper">
+    <p>Marker Stats</p>
+    <p>
+        Total: 
+        <span class="total">{totalDefault}</span>
+    </p>
+    <p>
+        Visible: 
+        <span class="visible">{visibleDefault}</span>
+    </p>
+    <p>
+        Gender:
+        <span class="gender"></span>
+    </p>
+</div>
+<script>
+    import { on } from "../lib/Events"
+    import type { MarkerIndiv, MarkerGroup } from '../lib/Markers';
+
+    const totalEl = () => document.querySelector('.wrapper .total');
+    const visibleEl = () => document.querySelector('.wrapper .visible');
+    const genderEl = () => document.querySelector('.wrapper .gender');
+    let total = '1000';
+    const getGenderSplit = (markers: MarkerGroup) => {
+        const genders = {
+            male: 0,
+            female: 0
+        };
+
+        markers.forEach(m => genders[m.data['Patient Gender']] += 1);
+
+        return genders;
+    }
+    on('markers:visibilitychange', ({ markers, visible }:{ markers: MarkerGroup, visible: MarkerGroup }) => {
+        
+        total = ''+markers.length;
+        totalEl().textContent = total
+        visibleEl().textContent = ''+visible.length;
+
+        const { male, female } = getGenderSplit(markers);
+
+        genderEl().textContent = `Male: ${male} Female: ${female}`;
+    });
+    on('markers:reset', ({ markers }) => {
+        const genders = {
+            female: 0,
+            male: 0
+        };
+        const _markers = markers.all();
+        _markers.forEach((m: MarkerIndiv) => genders[m['Patient Gender']] += 1);
+        totalEl().textContent = total;
+        visibleEl().textContent = total;
+        genderEl().textContent = ``;
+    })
+</script>
+<style>
+    .wrapper {
+        background: #eee;
+        font-weight: 500;
+        color: #010203;
+        width: max-content;
+        height: fit-content;
+        display: block;
+        padding: 0.5rem;
+        padding-right: 1rem;
+    }
+    .wrapper p {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    .wrapper p + p {
+        margin-top: 1ch;
+    }
+</style>

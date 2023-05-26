@@ -1,0 +1,11 @@
+---
+const {
+    name,
+    _key
+} = Astro.props;
+---
+<li data-target={_key}>
+    <button type="button">
+        {name}
+    </button>
+</li>

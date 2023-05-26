@@ -1,49 +1,35 @@
 ---
-import { getRecords } from '../lib/getRecords'
-import { useSanityClient, groq } from 'astro-sanity';
+import { p, _parseRecords } from '../lib/getRecords'
+import { useSanityClient } from 'astro-sanity';
+// import { parse } from 'csv-parse/.';
+
 const token = import.meta.env.SANITY_TOKEN;
-const projectId = import.meta.env.SANITY_PROJECT_ID;
+const t = (obj) => Object.prototype.toString.call(obj)
 if (Astro.request.method === 'POST') {
     const client = useSanityClient();
 
     const data = await Astro.request.formData();
+    // const originalFile = data.get('csv') as File;
+    const _records = data.get('records');
+    console.log(_records);
+    // const file = data.get('file') as File;
+    // const _file = file.clone();
+    // console.log(t(file));
+    // console.log(typeof file, await file.text())
+    
+    // const records = await _parseRecords(originalFile, 0);
+    // console.log(records);
+    // const records = await getRecords(1);
+    // const ouput = p(_records);
 
-    const records = await getRecords(1);
     const entries = [];
-    for (const record of records) {
-        delete record['Patient Name'];
-        delete record['Patient First Name'];
-        delete record['Patient Middle Initial'];
-        delete record['Patient Last Name'];
-        delete record['Patient Preferred Name'];
-        delete record['Patient Previous Name'];
-        entries.push(record);
-    }
-
-    // console.log(entries);
-    /*
-    const query = groq`{
-        create: {
-            _id: ${Date.now()},
-            _type: 'collection',
-            name: ${data.get('name')}
-        }
-    }`*/
-
-    const body = JSON.stringify({
-        name: data.get('name')
-    })
-    data.append('file', data.get('csv'), performance.now() + 'records.csv');
-    const mutations = [
-        {
-            create: {
-                _type: 'collection',
-                title: data.get('name'),
-                description: data.get('description'),
-                file: data.get('file'),
-            }
-        }
-    ];
+    // for (const record of records) {
+    //     const address = getAddress(record);
+        
+        
+    //     entries.push(record);
+    // }
+    // data.append('file', data.get('csv'), performance.now() + 'records.csv');
     
     /** client.create returns a result object with everything created, we need to grab the id though */
     const { _id } = await client.create({
@@ -56,19 +42,17 @@ if (Astro.request.method === 'POST') {
     }, {
         token
     });
-    const file = data.get('file') as File;
-    console.log(Object.prototype.toString.call(file));;
+
+    // @TODO Uploading isn't working due to "Body must be either string, file, or buffer" when uploading the file
+    // const uploadResults = await client.assets.upload('file', )
+    // const file = data.get('file') as File;
+    // console.log(Object.prototype.toString.call(file));
+    /*
     const uploadResults = await client.assets.upload('file', file, {
-        filename: file.name
+        filename: originalFile.name
     });
-
-    console.log(uploadResults);
-
-    // console.log(result);
-    console.log(data.get('csv'));
+    */
 }
-
-
 
 ---
 <form action={Astro.url.href} method="POST" enctype="multipart/form-data">
@@ -82,9 +66,161 @@ if (Astro.request.method === 'POST') {
         <input type="file" name="csv" id="csv" -required accept=".csv" />
     </label>
     <div>
+        <div class="tags-list">
+            <p>Select columns to be deleted before final upload.</p>
+        </div>
+    </div>
+    <input type="hidden" name="records" id="records" />
+    <div>
         <button>Create Dataset</button>
     </div>
 </form>
+<script>
+    import Papa from 'papaparse';
+    import { Loader } from '@googlemaps/js-api-loader';
+
+import { h } from 'preact';
+
+    const file = document.getElementById('csv') as HTMLInputElement;
+    const list = document.querySelector('.tags-list');
+    const form = document.querySelector('form');
+    const records = document.querySelector<HTMLInputElement>('#records');
+    const _data = [];
+    const _file = [];
+    const _headers = [];
+    let _records = [] as {}[];
+
+    const getAddress = (record: { [index: string]: string}) => {
+        const addressLine1 = record['Patient Address Line 1'];
+        const addressLine2 = record['Patient Address Line 2'];
+        const city = record['Patient City'];
+        const state = record['Patient State'];
+        const zip = record['Patient ZIP Code'];
+        const country = record['Patient Country'];
+        const countryCode = record['Patient Country Code'];
+
+        return {
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            zip,
+            country,
+            countryCode
+        };
+    }
+    let loader = new Loader({
+        apiKey: import.meta.env.PUBLIC_GOOGLE_MAPS,
+        version: 'weekly'
+    });
+
+    /**
+     * data should not include the headers row
+     */
+    const generateRecords = () => {
+        if (_data.length === 0) throw new Error('Missing data to transform');
+        if (_headers.length === 0) throw new Error('Missing headers to transform');
+        _records = _data.map((data:string[]) => {
+            const temp = {};
+            _headers.forEach((h:string, i:number) => {
+                temp[h] = data[i];
+            })
+            return temp;
+        });
+    }
+
+    file.addEventListener('change', () => {
+        if (file.files.length === 0) return;
+        
+        const upload = file.files[0];
+        
+
+        Papa.parse(upload, {
+            complete: ({ data }) => {
+                const [headers, ...parsed] = data;
+                const html = [];
+
+                for (const header of headers) {
+                    html.push(`<div class="tag-button">
+                        <button type="button">${header}</button>
+                    </div>`);
+                    _headers.push(header);
+                }
+                _data.push(...parsed);
+                generateRecords();
+                list.innerHTML = html.join('');
+            }
+        })
+    })
+    list.addEventListener('click', ({ target }) => {
+        const el = (target as HTMLElement).closest('.tag-button button');
+
+        if (!el) return;
+
+        const index = _headers.indexOf(el.textContent);
+
+        if (index > -1) {
+            _headers.splice(index, 1);
+            generateRecords();
+            /*
+            _records = _data.map((data:string[]) => {
+                const temp = {};
+                _headers.forEach((h, i) => {
+                    temp[h] = data[i]
+                })
+
+                return temp;
+            })
+            */
+        }
+        /*
+        if (index > -1) {
+            // _data[0].splice(_data.indexOf(el.textContent), 1);
+            for (const row of _data) {
+                row.splice(index, 1);
+                _file.push(row.join(','));
+            }
+
+            el.remove();
+        }*/
+    }); 
+    form.addEventListener('submit', async function formSubmit(e) {
+        e.preventDefault();
+        records.value = JSON.stringify(_records);
+
+        await loader.load();
+        // const { Geocoder } = await google.maps.importLibrary('geocoding');
+        
+        // @ts-ignore
+        // const { createClient } = await import('https://esm.sh/@sanity/client');
+
+        // const client = createClient({
+        //     projectId: 'ul053n8h',
+        //     dataset: 'production',
+        //     useCdn: true,
+        //     apiVersion: '2023-05-03'
+        // });
+
+        // const fd = new FormData(form);
+        /*
+        fd.append('file', new Blob([_file.join(`
+`)], { type: 'text/csv'}));
+        console.log(fd);
+        console.log(...fd.entries());
+        */
+       /*
+        const uploadResults = await client.assets.upload('file', file.files[0], {
+            filename: (document.getElementById('csv') as HTMLInputElement).files[0].name
+        })
+        console.log(uploadResults);
+        return;*/
+        
+        
+
+        // form.removeEventListener('submit', formSubmit);
+        // form.submit();
+    })
+</script>
 <style>
     form {
         display: grid;

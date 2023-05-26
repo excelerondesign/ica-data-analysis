@@ -1,13 +1,18 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Filters from "../components/Filters.astro";
-
+import Map from '../components/Map.astro';
 ---
 <Layout title="Map View">
     <aside>
         <Filters />
     </aside>
-    <main>
-        
-    </main>
+    <Map />
 </Layout>
+<style>
+    #map {
+        height: 800px;
+        width: 800px;
+        max-width: 100%;
+    }
+</style>

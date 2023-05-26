@@ -4,7 +4,7 @@ import RecordsList from '../components/RecordsList.astro';
 import { getRecords } from '../lib/getRecords';
 const possibleParam = Astro.url.searchParams.get('page');
 const currPage = possibleParam === '' ? 1 : +possibleParam;
-console.log(possibleParam);
+
 const records = await getRecords(currPage);
 
 ---
