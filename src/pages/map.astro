@@ -9,6 +9,7 @@ import Map from '../components/Map.astro';
         <h1>Markers are generated using fake data.</h1>
         <p>If a filter shows that there are no markers, try adjusting the radius slider.</p>
         <p>Filter logic is still in progress. It is possible to end up with missing or no markers due to a conflict in filtering. If that happens, refresh the page.</p>
+        <p>If the map shows an error, this is due to a missing API Key. The issue has already been noted.</p>
         <Filters defaultRadius={25} />
     </aside>
     <Map defaultRadius={25} />
