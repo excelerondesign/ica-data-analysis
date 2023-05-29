@@ -1,2 +1,1 @@
 /// <reference types="astro/client" />
-SANITY_TOKEN=skNDirNjukL3r9RtWlbcEde39fGdb0web8583VhjolIbrQvC4QfG68DQSEV118tFV9Bdw69PJGG33cvL1GLBlLcXcI9uoYj6dlphjQAydj6rVZ5tdpcLtissPw21kSVS5e1lnObxJPRUDE76dCgwj5WZmaZIe8nECBVNpxfyD7tTN3LzNLmU
