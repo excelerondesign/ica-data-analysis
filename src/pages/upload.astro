@@ -1,14 +1,23 @@
 ---
+import RetrievePrevious from '../components/RetrievePrevious.astro';
 import UploadCollection from '../components/UploadCollection.astro';
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="Upload a new dataset">
     <main>
         <a href="/">Back</a>
-        <h2>Upload a csv file to generate a list of filterable columns before saving. <br/>
+        <h2>Select data</h2>
+        <!--<h2>Upload a csv file to generate a list of filterable columns before saving. <br/>
             <small>While this upload is working, do not upload real data with potentially private information.</small>
-        </h2>
-        <UploadCollection />
+        </h2>-->
+        <details open>
+            <summary>Upload new data</summary>
+            <UploadCollection />
+        </details>
+        <details>
+            <summary>Select a previous upload</summary>
+            <RetrievePrevious />
+        </details>
     </main>
 </Layout>
 <style>
@@ -16,5 +25,11 @@ import Layout from '../layouts/Layout.astro';
         padding: 1.5rem;
         max-width: 70ch;
         margin: 0 auto;
+    }
+    details {
+        margin-top: 2ch;
+    }
+    details > summary {
+        font-size: 1.5rem;;
     }
 </style>
