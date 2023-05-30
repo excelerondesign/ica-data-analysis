@@ -19,7 +19,7 @@ if (Astro.request.method === 'POST') {
     const client = useSanityClient();
 
     const _result = Object.assign({}, ...Array.from((await Astro.request.formData()).entries(), ([key, value]) => ({ [key]: value as string })));
-    console.log(_result);
+    // console.log(_result);
 
     const { name, description, records } = _result;
     
@@ -36,7 +36,7 @@ if (Astro.request.method === 'POST') {
     });
     if (records !== undefined) {
         // console.log(records);
-        console.log(records[records.length - 1] === 'P');
+        // console.log(records[records.length - 1] === 'P');
         // const _parsed = JSON.parse(records);
         // console.log(_parsed);
         /*
@@ -105,7 +105,7 @@ if (Astro.request.method === 'POST') {
     </div>
 </form>
 <script>
-    /// <reference types="@types/papaparse" />
+    /// <reference types="../../index.d.ts" />
     import Papa from 'papaparse';
     // import { Loader } from '@googlemaps/js-api-loader';
 
