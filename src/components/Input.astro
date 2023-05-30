@@ -1,0 +1,22 @@
+---
+type InputProps = {
+    type: string;
+    id: string;
+    className: string|string[];
+    label: string;
+}
+const {
+    type,
+    id,
+    label
+} = Astro.props
+let { className } = Astro.props;
+
+if (!(className instanceof Array)) className = [className];
+---
+<div class="input-wrapper">
+    <input type={type} id={id} class={className.join(' ')} name={id} />
+    <label for={id}>{label}</label>
+</div>
+<style>
+</style>
