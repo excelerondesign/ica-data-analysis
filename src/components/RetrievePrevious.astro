@@ -1,0 +1,54 @@
+---
+import FormStyles from './Form.module.css';
+import Input from "./Input.astro";
+import { useSanityClient, groq } from 'astro-sanity';
+
+type CollectionResult = {
+    _id: string;
+    _createdAt: string;
+    name: string;
+    description: string;
+}
+
+let { 
+    href
+} = Astro.url;
+
+const options = [];
+let result: CollectionResult[];
+
+const format = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'full'
+});
+const newURL = new URL(href);
+
+newURL.searchParams.set('previous', '');
+
+href = newURL.href;
+if (Astro.request.method === 'POST' && Astro.params.previous) {
+} else {
+    const query = groq`*[_type == "collection"] {
+        _id,
+        _createdAt,
+        name,
+        description,
+    }`;
+    result = await useSanityClient().fetch<CollectionResult[]>(query);
+
+}
+
+---
+<form action={ href } method="POST" class={FormStyles.gridForm}>
+    <label for="prevData">Use a previous dataset:
+        <select name="prevData" id="prevData">
+            {result.map(({ _id, _createdAt, name }) => {
+                return <option value={_id}>
+                    {format.format(new Date(_createdAt))} - { name}
+                </option>
+            })}
+        </select>
+    </label>
+    <div class={FormStyles.colForm}>
+        <button class="btn">Load</button>
+    </div>
+</form>
