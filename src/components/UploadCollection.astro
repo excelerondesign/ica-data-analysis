@@ -1,48 +1,78 @@
 ---
+import FormStyles from './Form.module.css';
 import { p, _parseRecords } from '../lib/getRecords'
 import { useSanityClient } from 'astro-sanity';
+
+type RecordUpload = {
+    _type: string;
+    name: string;
+    description: string;
+    records: string[];
+}
+
 // import { parse } from 'csv-parse/.';
 
 const token = import.meta.env.SANITY_TOKEN;
-const t = (obj) => Object.prototype.toString.call(obj)
+const t = (obj:unknown) => Object.prototype.toString.call(obj)
+
 if (Astro.request.method === 'POST') {
     const client = useSanityClient();
 
-    const data = await Astro.request.formData();
-    // const originalFile = data.get('csv') as File;
-    const _records = data.get('records');
-    // console.log(_records);
-    // const file = data.get('file') as File;
-    // const _file = file.clone();
-    // console.log(t(file));
-    // console.log(typeof file, await file.text())
-    
-    // const records = await _parseRecords(originalFile, 0);
-    // console.log(records);
-    // const records = await getRecords(1);
-    // const ouput = p(_records);
+    const _result = Object.assign({}, ...Array.from((await Astro.request.formData()).entries(), ([key, value]) => ({ [key]: value as string })));
+    console.log(_result);
 
-    const entries = [];
-    // for (const record of records) {
-    //     const address = getAddress(record);
-        
-        
-    //     entries.push(record);
-    // }
-    // data.append('file', data.get('csv'), performance.now() + 'records.csv');
+    const { name, description, records } = _result;
     
-    /** client.create returns a result object with everything created, we need to grab the id though */
-    const { _id } = await client.create({
+    // const _chunkRecords = records.split(';');
+    // console.log(_chunkRecords[0]);
+    
+    const result = await client.create<RecordUpload>({
         _type: 'collection',
-        name: data.get('name'),
-        description: data.get('description'),
-        records: [
-            ...entries
-        ].map(e => JSON.stringify(e))
+        name,
+        description,
+        records: []
     }, {
         token
     });
+    if (records !== undefined) {
+        // console.log(records);
+        console.log(records[records.length - 1] === 'P');
+        // const _parsed = JSON.parse(records);
+        // console.log(_parsed);
+        /*
+        await Promise.all(JSON.parse(records).map(record => {
+            console.log(record);
+            return client.patch(result._id).insert('after', 'records', record);
+        }));*/
+    }
 
+    /*
+    for await (const chunk of _chunkRecords) {
+
+        const parsedChunk = JSON.parse(chunk);
+
+        client.patch(result._id).insert('after', 'records', [...parsedChunk]);
+    }
+    */
+    // const file = data.get('file') as File;
+    // const _file = file.clone();
+    
+    // const records = await _parseRecords(originalFile, 0);
+
+    // const records = await getRecords(1);
+    // const ouput = p(_records);
+    /*
+    const entries = [];
+    for (const record of _records) {
+        // const address = getAddress(record);
+        
+        
+        entries.push(record);
+    }*/
+    //  data.append('file', data.get('csv'), performance.now() + 'records.csv');
+    
+    /** client.create returns a result object with everything created, we need to grab the id though */
+    // success = result._id !== undefined ? true : false;
     // @TODO Uploading isn't working due to "Body must be either string, file, or buffer" when uploading the file
     // const uploadResults = await client.assets.upload('file', )
     // const file = data.get('file') as File;
@@ -53,9 +83,8 @@ if (Astro.request.method === 'POST') {
     });
     */
 }
-
 ---
-<form action={Astro.url.href} method="POST" enctype="multipart/form-data">
+<form action={Astro.url.href} method="POST" enctype="multipart/form-data" class={FormStyles.gridForm}>
     <label for="name">Name
         <input type="text" name="name" id="name" -required />
     </label>
@@ -72,20 +101,90 @@ if (Astro.request.method === 'POST') {
     </div>
     <input type="hidden" name="records" id="records" />
     <div class="col-form">
-        <button disabled class="btn">Create Dataset</button>
+        <button class="btn">Create Dataset</button>
     </div>
 </form>
 <script>
+    /// <reference types="@types/papaparse" />
     import Papa from 'papaparse';
-    import { Loader } from '@googlemaps/js-api-loader';
+    // import { Loader } from '@googlemaps/js-api-loader';
 
-// import { h } from 'preact';
+    type ParsedRecord = Record<string, string|number>;
+
+    const patientColumnsToRemove = [
+        'Age Group',
+        'Work Phone',
+        'Home Phone',
+        'Cell Phone',
+        'Characteristic',
+        'Deceased',
+        'Deceased Date',
+        'Registration Date',
+        'Registry Enabled',
+        'Email',
+        'Email Not Provided Reason',
+        'Text Enabled',
+        'Voice Enabled',
+        'Web Enabled',
+        'Demographic Employer Name',
+        'Demographic Employment Status',
+    ].map(v => 'Patient '+v);
+
+    const employeeColumnsToRemove = [
+        'Job Category',
+        'Hourly Rate'
+    ];
+
+    const employerColumnsToRemove = [
+        'Status',
+        'Phone No',
+        'Fax No',
+        'E-mail',
+    ].map(v => 'Employer '+v);
+
+    const guarantorColumnsToRemove = [
+        'Acct No',
+        'Name',
+        'Mailing Address Line 1',
+        'Mailing Address Line 2',
+        'Mailing City',
+        'Mailing State',
+        'Mailing ZIP Code',
+        'Phone No'
+    ].map(v => 'Guarantor '+v);
+
+    const genericColumnsToRemove = [
+        'Name',
+        'Address Line 1',
+        'Address Line 2',
+        'City',
+        'State',
+        'ZIP Code',
+        'Subscriber No',
+        'Group Name',
+        'Group No',
+        'Class',
+        'Insurance Group Name'
+    ];
+
+    const primaryInsurColumnsToRemove = genericColumnsToRemove.map(v => 'Primary Insurance '+v);
+    const secondaryInsurColumnsToRemove = genericColumnsToRemove.map(v => 'Secondary Insurance '+v);
+
+    const columnsToRemove = [
+        ...employeeColumnsToRemove,
+        ...employerColumnsToRemove,
+        ...patientColumnsToRemove,
+        ...guarantorColumnsToRemove,
+        ...primaryInsurColumnsToRemove,
+        ...secondaryInsurColumnsToRemove
+    ]
+
 
     const file = document.getElementById('csv') as HTMLInputElement;
     const list = document.querySelector('.tags-list');
     const form = document.querySelector('form');
     const records = document.querySelector<HTMLInputElement>('#records');
-    const _data = [];
+    const _data:string[] = [];
     const _file = [];
     const _headers = [];
     let _records = [] as {}[];
@@ -109,11 +208,12 @@ if (Astro.request.method === 'POST') {
             countryCode
         };
     }
+    /*
     let loader = new Loader({
         apiKey: import.meta.env.PUBLIC_GOOGLE_MAPS,
         version: 'weekly'
     });
-
+    */
     /**
      * data should not include the headers row
      */
@@ -121,12 +221,16 @@ if (Astro.request.method === 'POST') {
         if (_data.length === 0) throw new Error('Missing data to transform');
         if (_headers.length === 0) throw new Error('Missing headers to transform');
         _records = _data.map((data:string[]) => {
+            
             const temp = {};
             _headers.forEach((h:string, i:number) => {
+                console.log({ h, exists: columnsToRemove.indexOf(h) > -1 });
+                if (columnsToRemove.indexOf(h) > -1) return
                 temp[h] = data[i];
             })
             return temp;
         });
+        console.log(_records);
     }
 
     file.addEventListener('change', () => {
@@ -136,8 +240,8 @@ if (Astro.request.method === 'POST') {
         
 
         Papa.parse(upload, {
-            complete: ({ data }) => {
-                const [headers, ...parsed] = data;
+            complete: (results) => {
+                const [headers, ...parsed] = data as string[];
                 const html = [];
 
                 for (const header of headers) {
@@ -183,12 +287,71 @@ if (Astro.request.method === 'POST') {
 
             el.remove();
         }*/
-    }); 
+    });
+
+    const ACCT_NO = 'Patient Acct No';
+    type FixAcctNumber = {
+        ['Patient Acct No']: number;
+        [index:string]: string|number;
+    }
+    const chunk = <T,>(arr: T[], size:number):T[][] => (
+        arr.reduce((acc, e, i) => (i % size ? acc[acc.length - 1].push(e) : acc.push([e]), acc), [] as T[][])
+    )
+    
+
+    const fixAcctNumber = (obj:FixAcctNumber) => {
+        if (typeof obj[ACCT_NO] === 'string') obj[ACCT_NO] = +obj[ACCT_NO];
+
+        return obj;
+    }
+
+    const sortByAcctNumber = (arr:FixAcctNumber[]) => {
+        const records = arr.map((obj) => fixAcctNumber(obj));
+        let filteredRecords = records.reduce<{}[]>((acc, curr) => {
+        
+            if (acc.findIndex(r => r[ACCT_NO] === curr[ACCT_NO]) === -1) {
+                acc.push(curr);
+            }
+            return acc;
+        }, []);
+        filteredRecords = filteredRecords.sort((a,b) => {
+            return a[ACCT_NO] - b[ACCT_NO]
+        })
+
+        return filteredRecords;
+    }
+
     form.addEventListener('submit', async function formSubmit(e) {
         e.preventDefault();
-        records.value = JSON.stringify(_records);
-
-        await loader.load();
+        // console.log('before reduce', _records.length);
+        _records = sortByAcctNumber(_records as FixAcctNumber[]);
+        /*
+        _records = _records.reduce<ParsedRecord[]>((acc: ParsedRecord[], curr:ParsedRecord) => {
+            const acctNumber = +curr['Patient Acct No'];
+            
+            if (acc.findIndex(r => +r['Patient Acct No'] === acctNumber) === -1) {
+                curr['Patient Acct No'] = acctNumber;
+                acc.push(curr);
+            }
+            
+            return acc;
+        }, [])
+        */
+        // console.log('after reduce', _records.length)
+        
+        // const _groupedRecords = groupBy<ParsedRecord, string>(_records, 'Patient Acct No');
+        const _chunkRecords = chunk(_records, 250)
+        type ChunkedRecords = {
+            'Patient Acct No': string;
+            [index: string]: string;
+        }
+        // const _groupChunkRecords = 
+        // .map(r => JSON.stringify(r));
+        console.log(_chunkRecords[0]);
+        records.value = JSON.stringify(_chunkRecords);
+        // console.log(records.value);
+        // console.log(records.value);
+        // await loader.load();
         // const { Geocoder } = await google.maps.importLibrary('geocoding');
         
         // @ts-ignore
@@ -215,35 +378,17 @@ if (Astro.request.method === 'POST') {
         console.log(uploadResults);
         return;*/
         
-        
+        // console.log(_records);
 
         // form.removeEventListener('submit', formSubmit);
         // form.submit();
     })
 </script>
-<style>
-    form {
-        display: grid;
-        grid-template-columns: [form] repeat(2, 2fr);
-        gap: 1rem;
+<style is:inline>
+    summary {
+        user-select: none;
     }
-    input,
-    textarea {
-        border-color: transparent;
-        padding: 0.5em;
-        border-radius: 4px;
-    }
-    label {
-        display: flex;
-        flex-direction: column;
-        grid-column: form / span 1;
-        font-size: 1.1rem;
-        font-weight: 500;
-    }
-    label:has(textarea) {
-        grid-column: span 1;
-    }
-    .col-form {
-        grid-column: form;
+    summary + * {
+        margin-top: 1rem;
     }
 </style>
