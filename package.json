@@ -20,5 +20,8 @@
     "csv-parser": "^3.0.0",
     "papaparse": "^5.4.1",
     "preact": "^10.15.0"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.7"
   }
 }
