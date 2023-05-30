@@ -1,0 +1,29 @@
+.gridForm {
+    display: grid;
+    grid-template-columns: [form] repeat(2, 2fr);
+    gap: 1rem;
+}
+:is(.gridForm) :is(
+    input,
+    select,
+    textarea
+) {
+    border-color: transparent;
+    padding: 0.5em;
+    border-radius: 4px;
+}
+:is(.gridForm) label {
+    display: flex;
+    flex-direction: column;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+:is(.gridForm) label {
+    grid-column: form / span 1;
+}
+.gridForm label:has(textarea) {
+    grid-column: span 1;
+}
+.gridForm .colForm {
+    grid-column: form;
+}
