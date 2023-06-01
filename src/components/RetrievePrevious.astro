@@ -14,7 +14,6 @@ let {
     href
 } = Astro.url;
 
-const options = [];
 let result: CollectionResult[];
 
 const format = new Intl.DateTimeFormat('en-US', {
@@ -26,6 +25,7 @@ newURL.searchParams.set('previous', '');
 
 href = newURL.href;
 if (Astro.request.method === 'POST' && Astro.params.previous) {
+
 } else {
     const query = groq`*[_type == "collection"] {
         _id,
@@ -34,15 +34,15 @@ if (Astro.request.method === 'POST' && Astro.params.previous) {
         description,
     }`;
     result = await useSanityClient().fetch<CollectionResult[]>(query);
-
 }
-
+const activeDoc = Astro.cookies.get('document-id').value;
 ---
 <form action={ href } method="POST" class={FormStyles.gridForm}>
     <label for="prevData">Use a previous dataset:
         <select name="prevData" id="prevData">
             {result.map(({ _id, _createdAt, name }) => {
-                return <option value={_id}>
+                const selected = activeDoc === _id;
+                return <option value={_id} selected={selected}>
                     {format.format(new Date(_createdAt))} - { name}
                 </option>
             })}
@@ -52,3 +52,19 @@ if (Astro.request.method === 'POST' && Astro.params.previous) {
         <button class="btn">Load</button>
     </div>
 </form>
+<script>
+    import { cookies } from '../lib/data';
+
+    const select = document.querySelector<HTMLSelectElement>('#prevData');
+
+    if (localStorage.getItem('document-id') !== null) {
+        select.value = localStorage.getItem('document-id');
+    }
+    select.addEventListener('change', ({ target }) => {
+        const { value } = target as HTMLSelectElement;
+
+        cookies.set('document-id', value);
+
+        localStorage.setItem('document-id', value);
+    });
+</script>
