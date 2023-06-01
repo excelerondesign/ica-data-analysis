@@ -1,10 +1,24 @@
 ---
 import TotalMarkers from './TotalMarkers.astro';
+import { groq, useSanityClient } from 'astro-sanity';
 const {
     defaultRadius 
 } = Astro.props;
+let markersData = [];
+if (Astro.cookies.get('document-id').value !== '') {
+    const client = useSanityClient();
+
+    const query = groq`*[_type == 'patient-group' && reference == "${Astro.cookies.get('document-id').value}"]`
+
+    const result = await client.fetch(query);
+
+    result.forEach(({ group }) => {
+        markersData = markersData.concat(group.map((g:string) => JSON.parse(g)));
+    });
+}
+
 ---
-<div id="map" data-default-radius={defaultRadius}></div>
+<div id="map" data-default-radius={defaultRadius}  data-markers={JSON.stringify(markersData)}></div>
 <TotalMarkers />
 <script>
     import { Clusterer } from '../lib/Clusterer';
@@ -12,10 +26,11 @@ const {
     import { Circles } from '../lib/Circles';
     import { Markers } from '../lib/Markers';
     import { _markers, Clinics } from '../lib/data';
-    import { emit, on } from '../lib/Events';
+    import { on } from '../lib/Events';
 
     const _map = document.getElementById('map') as HTMLDivElement;
-    
+    const markersData = JSON.parse(_map.dataset.markers);
+
     const { Map } = await library.maps.importLibrary('maps');
 
     async function getClinicsBounds() {
@@ -42,97 +57,147 @@ const {
         setVisible: (isVisible: boolean) => void;
         getCenter: () => number;
     }
+    const fakeMarkers = _markers(Clinics, markersData);
 
-    const markers = new Markers(_markers(Clinics), map, bounds);
+    const markers = new Markers(fakeMarkers, map, bounds);
+
 
     map.setCenter(bounds.getCenter());
     map.fitBounds(bounds);
 
     map.controls[library.maps.ControlPosition.TOP_RIGHT].push(document.querySelector('.totalmarkers--wrapper'));
 
-    type Filters = {
-        [index: string]: () => void;
+    interface FilterFunction {
+        circles?: Circles;
+        marker?: typeof library.maps.Marker;
+        clusterer?: Clusterer;
+        value?: string|string[];
     }
-    let filters:Filters = {};
-    
-    
-    let fRic;
-    
-    const runFilters = () => {
-        cancelIdleCallback(fRic);
-        fRic = requestIdleCallback(() => {
-            Object.values(filters).forEach(callback => callback())
-            
-            emit('markers:visibilitychange', {
-                markers: markers.all(),
-                visible: markers.getVisible(),
-            });
-        });
+
+    type Filters = {
+        [index: string]: unknown|((args:FilterFunction) => boolean);
+    }
+
+    const noop = () => {};
+    let activeClinics = [];
+    const filters:Filters = {
+        isInBounds: ({ marker, circles }) => {
+            if (activeClinics.length === 0) {
+                circles.showAll();
+
+                return true;
+            }
+
+            circles.hide(activeClinics);
+
+            const inCircle = circles.calculateInCircle(marker, activeClinics);
+            return inCircle;
+        },
+        'Patient Gender': false,
+        'Patient Race': []
     };
+
+    interface UpdateFilterArgs {
+        value?: string|string[];
+        clear?: boolean;
+    }
+
+    /** Based on answer here: https://stackoverflow.com/a/64084454 */
+    const updateFilter = ({ value, clear }:UpdateFilterArgs) => {
+        const markersToShow = markers.filter(m => {
+            if (clear) return true;
+
+            let shouldShow = true;
+            for (const [key, val ] of Object.entries(filters)) {
+                if (Array.isArray(val)) {
+                    
+                    if (val.length === 0) continue;
+                    if (!val.includes(m.data[key])) shouldShow = false;
+                } else if (typeof val === 'function') {
+
+                    if (value === undefined) continue;
+                    if (!val({ marker: m, circles, clusterer, value })) {
+                        shouldShow = false;
+                    }
+                } else {
+                    
+                    if (val === false) continue;
+                    if (val !== m.data[key]) shouldShow = false;
+                }
+            }
+
+            return shouldShow;
+        });
+
+        markers.setVisible(m => markersToShow.includes(m));
+        clusterer.refresh();
+    }
+    
+    
+    let fRic: number;
     
     const clusterer = new Clusterer(markers.all(), map)
     
     const circles = new Circles(map, _map, +_map.dataset.defaultRadius, Clinics);
 
-    
+    const updateFilterArr = (arr:string[], value: string|string[]) => {
+        const _temp = new Set<string>();
 
-    on('filters:change', ({ type, value }) => {
-        if (fRic) cancelIdleCallback(fRic);
+        if (Array.isArray(arr)) {
+            arr.forEach((v) => _temp.add(v));
+        }
+
+        if (Array.isArray(value)) {
+            value.forEach(v => _temp.add(v));
+
+            _temp.forEach(v => {
+                !value.includes(v) && _temp.delete(v);
+            })
+        } else {
+            _temp.add(value);
+        }
+
+        const newArr = [..._temp];
         
-        if (type === 'clinic' && value instanceof Array) {
-            if (value.length > 0) {
-                filters.clinic = () => {
-                    circles.hide(value);
-                    
-                    const clusterMarkers = [];
+        return newArr;
+    }
 
-                    markers.setVisible(m => {
-                        const isInBounds = circles.calculateInCircle(m, value);
-
-                        m.setVisible(isInBounds);
-                        if (m.getVisible()) clusterMarkers.push(m);
-                    });
-                    clusterer.refresh();
-                }
-            } else {
-                filters.clinic = () => {
-                    delete filters.clinic;
-                    circles.showAll();
-                    requestAnimationFrame(() => markers.reset());
-                    requestAnimationFrame(() => clusterer.refresh());
-                }
-            }
+    on('filters:change', ({ type, value }:{ type: string, value: string|string[] }) => {
+        if (fRic) cancelIdleCallback(fRic);
+        circles.hide(value);
+        if (type === 'clinic') {
+            activeClinics = updateFilterArr(activeClinics, value);
         }
+
         if (type === 'sex') {
-            filters.sex = () => {
-                value = value.toLowerCase();
-
-                const _markers = markers.getVisible();
-
-                _markers.forEach(m => {
-                    m.setVisible(m.data['Patient Gender'] === value);
-                });
-
-                clusterer.refresh();
+            if (value === 'Any') {
+                filters['Patient Gender'] = false;
+            } else {
+                filters['Patient Gender'] = (value as string).toLowerCase();
             }
         }
+        
+        if (type === 'race') {
+            filters['Patient Race'] = value
+        }
 
-        runFilters();
+        markers.reset();
+        updateFilter({ value });
     });
 
-    on('filters:clear', ({ type, force }) => {
+    on('filters:clear', () => {
         circles.showAll();
-        if (force) {
-            filters = {};
-            markers.reset();
-        } else if (type && type in filters) {
-            delete filters[type];
-            runFilters();
-        }
+        Object.entries(filters).forEach(([key, value]) => {
+            if (typeof value !== 'function') filters[key] = false;
+        });
+        markers.reset();
+        activeClinics = [];
+        updateFilter({ clear: true });
+        
         clusterer.refresh();
     });
 
-    on('filters:refresh', () => runFilters());
+    on('filters:refresh', () => updateFilter({ value: activeClinics }));
 </script>
 <style>
     #map {
