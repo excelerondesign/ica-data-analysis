@@ -1,43 +1,10 @@
 export const MapColors = ['#dfa','#adf','#e0f'];
 
-type ClinicColor = {
-    _type: string;
-    rgb: {
-        _type: string;
-        a: number;
-        b: number;
-        r:number;
-        g: number
-    },
-    hex: string;
-    hsl: {
-        _type: string;
-        h: number;
-        s: number;
-        l: number;
-        a: number
-    }
-    alpha: number;
-    hsv: {
-        _type: string;
-        v: number;
-        h: number;
-        s: number;
-        a: number;
-    }
-}
-export type ClinicFetch = {
-    name: string;
-    lat: number;
-    lng: number;
-    color: ClinicColor;
-}
 export type Clinic = {
     name: string;
     lat: number;
     lng: number;
     color: string;
-    // _color: ClinicColor;
 }
 export const Clinics:Clinic[] = [
     {
@@ -90,15 +57,26 @@ const getRandomLatLng = (Clinics:Clinic[]) => {
     return data;
 }
 
+export const PossibleRaces = [
+    'White',
+    'Hispanic',
+    'African American'
+];
+
+const getRandomIndex = (arr:unknown[]):number => Math.floor(Math.random() * arr.length);
+
 export const _markers = (Clinics:Clinic[], supplemental:{}[]) => {
     const data = Array.from({ length: 1000 }, (x, i) => {
         const extraData = supplemental[i];
-        return {
+        const _markerData = {
             ['Patient Gender']: Math.random() > 0.5 ? 'male' : 'female',
             ['Patient Acct No']: i,
             ['Patient LatLng']: getRandomLatLng(Clinics),
+            ['Patient Race']: PossibleRaces[getRandomIndex(PossibleRaces)],
             ...extraData
         }
+
+        return _markerData;
     });
 
     return data;
