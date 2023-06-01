@@ -7,91 +7,79 @@ type RecordUpload = {
     _type: string;
     name: string;
     description: string;
-    records: string[];
 }
-
-// import { parse } from 'csv-parse/.';
 
 const token = import.meta.env.SANITY_TOKEN;
 const t = (obj:unknown) => Object.prototype.toString.call(obj)
-
+let successId = ""
 if (Astro.request.method === 'POST') {
     const client = useSanityClient();
 
-    const _result = Object.assign({}, ...Array.from((await Astro.request.formData()).entries(), ([key, value]) => ({ [key]: value as string })));
-    // console.log(_result);
-
-    const { name, description, records } = _result;
+    const results:RecordUpload = {
+        _type: 'collection',
+        name: '',
+        description: ''
+    };
+    let records:string[][] = [];
+    const entries = (await Astro.request.formData()).entries();
     
-    // const _chunkRecords = records.split(';');
-    // console.log(_chunkRecords[0]);
+    for (const [key, value] of entries) {
+        console.log({ key, i: key.indexOf('record') });
+        if (key.indexOf('record') > -1) {
+
+            const entryRecords = JSON.parse(value as string) as {}[];
+            records.push(entryRecords.map(record => JSON.stringify(record)));
+        } else {
+            results[key] = value;
+        }
+    }
+    
+    const { name, description, _type } = results;
     
     const result = await client.create<RecordUpload>({
-        _type: 'collection',
+        _type,
         name,
-        description,
-        records: []
+        description
     }, {
         token
     });
-    if (records !== undefined) {
-        // console.log(records);
-        // console.log(records[records.length - 1] === 'P');
-        // const _parsed = JSON.parse(records);
-        // console.log(_parsed);
-        /*
-        await Promise.all(JSON.parse(records).map(record => {
-            console.log(record);
-            return client.patch(result._id).insert('after', 'records', record);
-        }));*/
+
+    const { _id } = result;
+    successId = _id;
+
+    type RecordGroup = {
+        _type: string;
+        name: string;
+        reference: string;
+        group: string[];
+    }
+    
+    if (records?.length > 0) {
+        
+        await Promise.all(records.map(async (recordGroup, i) => await client.create<RecordGroup>({
+            _type: 'patient-group',
+            reference: _id,
+            name: `${name} - ${_id}`,
+            group: recordGroup
+        }, {
+            token
+        }))).catch((error) => {
+            console.error(error);
+        })
     }
 
-    /*
-    for await (const chunk of _chunkRecords) {
 
-        const parsedChunk = JSON.parse(chunk);
-
-        client.patch(result._id).insert('after', 'records', [...parsedChunk]);
-    }
-    */
-    // const file = data.get('file') as File;
-    // const _file = file.clone();
-    
-    // const records = await _parseRecords(originalFile, 0);
-
-    // const records = await getRecords(1);
-    // const ouput = p(_records);
-    /*
-    const entries = [];
-    for (const record of _records) {
-        // const address = getAddress(record);
-        
-        
-        entries.push(record);
-    }*/
-    //  data.append('file', data.get('csv'), performance.now() + 'records.csv');
-    
-    /** client.create returns a result object with everything created, we need to grab the id though */
-    // success = result._id !== undefined ? true : false;
-    // @TODO Uploading isn't working due to "Body must be either string, file, or buffer" when uploading the file
-    // const uploadResults = await client.assets.upload('file', )
-    // const file = data.get('file') as File;
-    // console.log(Object.prototype.toString.call(file));
-    /*
-    const uploadResults = await client.assets.upload('file', file, {
-        filename: originalFile.name
-    });
-    */
+    Astro.cookies.set('document-id', _id);
 }
 ---
-<form action={Astro.url.href} method="POST" enctype="multipart/form-data" class={FormStyles.gridForm}>
+<form action={Astro.url.href} method="POST" enctype="multipart/form-data" class={FormStyles.gridForm} data-success-id={successId || null}>
     <label for="name">Name
         <input type="text" name="name" id="name" -required />
     </label>
     <label for="description">Description
         <textarea name="description" id="description"></textarea>
     </label>
-    <label for="csv">File (Must be .csv format, .xls will not work.);
+    <label for="csv">File (Must be .csv format, .xls will not work.)
         <input type="file" name="csv" id="csv" -required accept=".csv" />
     </label>
     <div>
@@ -99,7 +87,9 @@ if (Astro.request.method === 'POST') {
             <p>Select columns to be deleted before final upload.</p>
         </div>
     </div>
-    <input type="hidden" name="records" id="records" />
+    <div id="hiddenChunks">
+
+    </div>
     <div class="col-form">
         <button class="btn">Create Dataset</button>
     </div>
@@ -107,7 +97,6 @@ if (Astro.request.method === 'POST') {
 <script>
     /// <reference types="../../index.d.ts" />
     import Papa from 'papaparse';
-    // import { Loader } from '@googlemaps/js-api-loader';
 
     type ParsedRecord = Record<string, string|number>;
 
@@ -179,58 +168,63 @@ if (Astro.request.method === 'POST') {
         ...secondaryInsurColumnsToRemove
     ]
 
-
     const file = document.getElementById('csv') as HTMLInputElement;
     const list = document.querySelector('.tags-list');
     const form = document.querySelector('form');
-    const records = document.querySelector<HTMLInputElement>('#records');
+    
+    if (form.dataset.successId !== undefined) {
+        localStorage.setItem('document-id', form.dataset.successId);
+    }
+
+    // const records = document.querySelector<HTMLInputElement>('#records');
+    const hiddenChunks = document.querySelector<HTMLDivElement>('#hiddenChunks');
     const _data:string[] = [];
-    const _file = [];
+    // const _file = [];
     const _headers = [];
     let _records = [] as {}[];
 
-    const getAddress = (record: { [index: string]: string}) => {
-        const addressLine1 = record['Patient Address Line 1'];
-        const addressLine2 = record['Patient Address Line 2'];
-        const city = record['Patient City'];
-        const state = record['Patient State'];
-        const zip = record['Patient ZIP Code'];
-        const country = record['Patient Country'];
-        const countryCode = record['Patient Country Code'];
+    const chunk = <T,>(arr: T[], size:number):T[][] => (
+        arr.reduce((acc, e, i) => (i % size ? acc[acc.length - 1].push(e) : acc.push([e]), acc), [] as T[][])
+    )
 
-        return {
-            addressLine1,
-            addressLine2,
-            city,
-            state,
-            zip,
-            country,
-            countryCode
-        };
+    const addHiddenInputs = (records: {}[]) => {
+        hiddenChunks.innerHTML = '';
+        const _chunkRecords = chunk(records, 200);
+
+        _chunkRecords.map((recordChunk, i) => {
+            i += 1;
+            const hInput = Object.assign(document.createElement('input'), {
+                type: 'hidden',
+                name: 'record['+i+']',
+                value: JSON.stringify(recordChunk)
+            })
+
+            hiddenChunks.append(hInput);
+        });
     }
-    /*
-    let loader = new Loader({
-        apiKey: import.meta.env.PUBLIC_GOOGLE_MAPS,
-        version: 'weekly'
-    });
-    */
+
     /**
      * data should not include the headers row
      */
     const generateRecords = () => {
         if (_data.length === 0) throw new Error('Missing data to transform');
         if (_headers.length === 0) throw new Error('Missing headers to transform');
-        _records = _data.map((data:string[]) => {
+
+        /**
+         * _data should be an array of string arrays, but it isn't set as one in the type,
+         * this should be remedied at some point.
+         */
+        const transformedRecords = (_data as unknown as string[][]).map((data:string[]) => {
             
             const temp = {};
             _headers.forEach((h:string, i:number) => {
-                console.log({ h, exists: columnsToRemove.indexOf(h) > -1 });
                 if (columnsToRemove.indexOf(h) > -1) return
                 temp[h] = data[i];
             })
             return temp;
         });
-        console.log(_records);
+
+        addHiddenInputs(transformedRecords);
     }
 
     file.addEventListener('change', () => {
@@ -241,6 +235,7 @@ if (Astro.request.method === 'POST') {
 
         Papa.parse(upload, {
             complete: (results) => {
+                const { data } = results;
                 const [headers, ...parsed] = data as string[];
                 const html = [];
 
@@ -266,27 +261,7 @@ if (Astro.request.method === 'POST') {
         if (index > -1) {
             _headers.splice(index, 1);
             generateRecords();
-            /*
-            _records = _data.map((data:string[]) => {
-                const temp = {};
-                _headers.forEach((h, i) => {
-                    temp[h] = data[i]
-                })
-
-                return temp;
-            })
-            */
         }
-        /*
-        if (index > -1) {
-            // _data[0].splice(_data.indexOf(el.textContent), 1);
-            for (const row of _data) {
-                row.splice(index, 1);
-                _file.push(row.join(','));
-            }
-
-            el.remove();
-        }*/
     });
 
     const ACCT_NO = 'Patient Acct No';
@@ -294,9 +269,6 @@ if (Astro.request.method === 'POST') {
         ['Patient Acct No']: number;
         [index:string]: string|number;
     }
-    const chunk = <T,>(arr: T[], size:number):T[][] => (
-        arr.reduce((acc, e, i) => (i % size ? acc[acc.length - 1].push(e) : acc.push([e]), acc), [] as T[][])
-    )
     
 
     const fixAcctNumber = (obj:FixAcctNumber) => {
@@ -323,65 +295,11 @@ if (Astro.request.method === 'POST') {
 
     form.addEventListener('submit', async function formSubmit(e) {
         e.preventDefault();
-        // console.log('before reduce', _records.length);
+        
         _records = sortByAcctNumber(_records as FixAcctNumber[]);
-        /*
-        _records = _records.reduce<ParsedRecord[]>((acc: ParsedRecord[], curr:ParsedRecord) => {
-            const acctNumber = +curr['Patient Acct No'];
-            
-            if (acc.findIndex(r => +r['Patient Acct No'] === acctNumber) === -1) {
-                curr['Patient Acct No'] = acctNumber;
-                acc.push(curr);
-            }
-            
-            return acc;
-        }, [])
-        */
-        // console.log('after reduce', _records.length)
-        
-        // const _groupedRecords = groupBy<ParsedRecord, string>(_records, 'Patient Acct No');
-        const _chunkRecords = chunk(_records, 250)
-        type ChunkedRecords = {
-            'Patient Acct No': string;
-            [index: string]: string;
-        }
-        // const _groupChunkRecords = 
-        // .map(r => JSON.stringify(r));
-        console.log(_chunkRecords[0]);
-        records.value = JSON.stringify(_chunkRecords);
-        // console.log(records.value);
-        // console.log(records.value);
-        // await loader.load();
-        // const { Geocoder } = await google.maps.importLibrary('geocoding');
-        
-        // @ts-ignore
-        // const { createClient } = await import('https://esm.sh/@sanity/client');
 
-        // const client = createClient({
-        //     projectId: 'ul053n8h',
-        //     dataset: 'production',
-        //     useCdn: true,
-        //     apiVersion: '2023-05-03'
-        // });
-
-        // const fd = new FormData(form);
-        /*
-        fd.append('file', new Blob([_file.join(`
-`)], { type: 'text/csv'}));
-        console.log(fd);
-        console.log(...fd.entries());
-        */
-       /*
-        const uploadResults = await client.assets.upload('file', file.files[0], {
-            filename: (document.getElementById('csv') as HTMLInputElement).files[0].name
-        })
-        console.log(uploadResults);
-        return;*/
-        
-        // console.log(_records);
-
-        // form.removeEventListener('submit', formSubmit);
-        // form.submit();
+        form.removeEventListener('submit', formSubmit);
+        form.submit();
     })
 </script>
 <style is:inline>
