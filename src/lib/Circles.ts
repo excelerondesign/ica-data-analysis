@@ -36,8 +36,13 @@ export class Circles {
 
     hide(name:string|string[]) {
         if (name instanceof String) name = [name as string];
-
-        this.__circles_.forEach((c) => c.setVisible(name.includes(c.name)));
+        if (name.length === 0) {
+            this.showAll();
+        } else {
+            this.__circles_.forEach((c) => {
+                c.setVisible(name.includes(c.name));
+            });
+        }
     }
 
     updateRadius(newRadiusInMi:number) {
@@ -46,9 +51,8 @@ export class Circles {
         emit('filters:refresh');
     }
 
-    calculateInCircle(marker, name:string|string[]) {
+    calculateInCircle(marker:typeof library.maps.Marker, name:string|string[]) {
         if (name instanceof String) name = [name as string];
-
 
         const pos = marker.getPosition();
 
@@ -61,25 +65,6 @@ export class Circles {
         })
 
         return results.every(Boolean);
-        /*
-        if (name) {
-            const clinic = this.__circles_.filter(c => c.name === name)[0];
-
-            const center = clinic.getCenter();
-
-            const distance = spherical.computeDistanceBetween(center, pos);
-            const radius = clinic.getRadius();
-            return distance <= radius;
-        }
-
-        const results = this.__circles_.filter(c => {
-            const center = c.getCenter();
-            const distance = spherical.computeDistanceBetween(center, pos);
-            const radius = c.getRadius();
-            return distance <= radius;
-        })
-
-        return results;*/
     }
 
     calculateInBounds(marker, name = null) {
