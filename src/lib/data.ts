@@ -1,5 +1,3 @@
-import { groq, useSanityClient } from "astro-sanity";
-
 export const MapColors = ['#dfa','#adf','#e0f'];
 
 type ClinicColor = {
@@ -92,12 +90,14 @@ const getRandomLatLng = (Clinics:Clinic[]) => {
     return data;
 }
 
-export const _markers = (Clinics:Clinic[]) => {
+export const _markers = (Clinics:Clinic[], supplemental:{}[]) => {
     const data = Array.from({ length: 1000 }, (x, i) => {
+        const extraData = supplemental[i];
         return {
             ['Patient Gender']: Math.random() > 0.5 ? 'male' : 'female',
             ['Patient Acct No']: i,
-            ['Patient LatLng']: getRandomLatLng(Clinics)
+            ['Patient LatLng']: getRandomLatLng(Clinics),
+            ...extraData
         }
     });
 
@@ -105,3 +105,13 @@ export const _markers = (Clinics:Clinic[]) => {
 }
 
 export const convertToMeters = (mi:number) => mi * 1604.344;
+
+export const cookies = {
+    get(name:string):string {
+        let value = '; '+document?.cookie;
+        let parts = value.split('; '+name+'=');
+        if (parts.length == 2) return parts.pop().split(";").shift();
+    },
+    set: (name:string, value:string) => document.cookie = `${name}=${value}`,
+    remove: (name:string) => document.cookie = `${name}=null; path=/; max-age=0`,
+}
