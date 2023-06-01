@@ -21,12 +21,13 @@ const off = (type, handler) => {
     }
 }
 
-const emit = (type, detail = {}) => {
+const emit = (type, detail = {}, useNativeDispatch) => {
     const handlers = all.get(type);
     
     if (handlers) {
         handlers.slice().map(handler => handler(detail));
     }
+    if (useNativeDispatch) document.dispatchEvent(new CustomEvent(type, { detail }));
 }
 
 export {

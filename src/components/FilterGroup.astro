@@ -5,9 +5,12 @@ const {
     name,
     filterType
 } = Astro.props;
+const id = name;
+
 ---
-<li id={name}>
+<li id={id} data-filter-name={name.toLowerCase()}>
     <p class="filter-group-title">{name}</p>
+    <!-- <button type="button" id={id+'--clear'}>&times;</button> -->
     {
         values.map((v:unknown) => {
             const classNames = `filter filter--${type}`;
@@ -18,3 +21,25 @@ const {
         })
     }
 </li>
+<script define:vars={{ name, id }} type="module">
+    document.addEventListener('filters:clear', () => {
+        document.querySelectorAll(`#${id} input`).forEach((input) => {
+            if (['checkbox', 'radio'].includes(input.type)) {
+                input.checked = false;
+            }
+        })
+    })
+</script>
+<style>
+    button {
+        font-size: 1.5rem;
+    }
+    li {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    li > p {
+        flex-basis: 100%;
+    }
+</style>
