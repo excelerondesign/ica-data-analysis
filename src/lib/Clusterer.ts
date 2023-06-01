@@ -1,5 +1,4 @@
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import { Marker } from "@googlemaps/markerclusterer/dist/marker-utils";
 import { library } from "./google-loader";
 
 
